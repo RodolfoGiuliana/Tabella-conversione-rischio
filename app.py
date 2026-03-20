@@ -86,7 +86,6 @@ if dist_sl > 0:
 
     # --- 7. TABELLA MONEY MANAGEMENT DINAMICA ---
     st.subheader(" Piano di Crescita Mensile (Target 3%)")
-    st.write(f"Con un rischio dello **{risk_perc}%**, ecco come gestire il tuo capitale di **{balance:.2f}€**:")
 
     # Calcoli per la tabella basati sul rischio selezionato
     win_RR2 = risk_euro * 2 # Profitto per singola operazione con RR 1:2
