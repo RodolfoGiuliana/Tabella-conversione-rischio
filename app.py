@@ -1,82 +1,102 @@
 import streamlit as st
 
 # Configurazione Pagina
-st.set_page_config(page_title="Cerberus R&D - Multi-Asset Calculator", layout="centered")
+st.set_page_config(page_title="Cerberus R&D - Professional Trader Tool", layout="wide")
 
-st.title("📊 Multi-Asset Risk Calculator")
-st.subheader("By Cerberus R&D")
-st.markdown("---")
+# --- LOGICA RESET VALORI ---
+# Inizializziamo i valori di default se non esistono
+if 'last_asset' not in st.session_state:
+    st.session_state.last_asset = "Indici (DAX)"
+    st.session_state.entry = 22800.0
+    st.session_state.sl = 22750.0
+    st.session_state.tp = 22900.0
 
-# --- SEZIONE 1: IMPOSTAZIONI ACCOUNT ---
-st.sidebar.header("Impostazioni Account")
-balance = st.sidebar.number_input("Capitale del Conto (€)", min_value=0.0, value=10000.0, step=100.0)
-risk_percent = st.sidebar.slider("Rischio per Operazione (%)", 0.10, 5.0, 0.25, 0.05)
+def reset_values():
+    if st.session_state.asset_selection == "Indici (DAX)":
+        st.session_state.entry = 22800.0
+        st.session_state.sl = 22700.0
+        st.session_state.tp = 23000.0
+    elif st.session_state.asset_selection == "Forex (EUR/USD)":
+        st.session_state.entry = 1.08500
+        st.session_state.sl = 1.08000
+        st.session_state.tp = 1.09500
+    elif st.session_state.asset_selection == "Crypto (BTC)":
+        st.session_state.entry = 65000.0
+        st.session_state.sl = 64000.0
+        st.session_state.tp = 68000.0
 
-# --- SEZIONE 2: SELEZIONE ASSET ---
-asset_class = st.selectbox(
-    "Seleziona lo strumento:",
-    ["Indici (DAX, NASDAQ, ecc.)", "Forex (EURUSD, GBPUSD, ecc.)", "Crypto (BTC, ETH, ecc.)"]
+# --- SIDEBAR ---
+st.sidebar.title("🛡️ Cerberus R&D")
+balance = st.sidebar.number_input("Capitale Conto (€)", value=10000.0, step=1000.0)
+risk_perc = st.sidebar.slider("Rischio per Operazione (%)", 0.10, 2.0, 0.25, 0.05)
+
+# --- SELEZIONE ASSET CON CALLBACK PER RESET ---
+asset = st.selectbox(
+    "Seleziona Asset Class:",
+    ["Indici (DAX)", "Forex (EUR/USD)", "Crypto (BTC)"],
+    key="asset_selection",
+    on_change=reset_values
 )
 
-st.markdown(f"### Parametri {asset_class}")
+st.markdown("---")
 
+# --- INPUT DINAMICI ---
 col1, col2, col3 = st.columns(3)
 with col1:
-    entry = st.number_input("Prezzo Entrata", min_value=0.0, value=24500.0, format="%.5f")
+    entry = st.number_input("Prezzo Entrata", value=st.session_state.entry, format="%.5f", key="entry_input")
 with col2:
-    sl = st.number_input("Stop Loss", min_value=0.0, value=24000.0, format="%.5f")
+    sl = st.number_input("Stop Loss", value=st.session_state.sl, format="%.5f", key="sl_input")
 with col3:
-    tp = st.number_input("Take Profit", min_value=0.0, value=25000.0, format="%.5f")
+    tp = st.number_input("Take Profit", value=st.session_state.tp, format="%.5f", key="tp_input")
 
-# --- LOGICA DI CALCOLO ---
-risk_euros = balance * (risk_percent / 100)
+# --- CALCOLI ---
+risk_euro = balance * (risk_perc / 100)
 distanza_sl = abs(entry - sl)
 distanza_tp = abs(tp - entry)
 
 if distanza_sl > 0:
-    if asset_class == "Indici (DAX, NASDAQ, ecc.)":
-        # Tua specifica: 0.01 lotti = 0.10€ a punto -> 1 lotto = 10€/punto
-        valore_per_unita = 10.0
-        lotti = risk_euros / (distanza_sl * valore_per_unita)
-        
-    elif asset_class == "Forex (EURUSD, GBPUSD, ecc.)":
-        # Calcolo Standard Forex: 1 lotto (100k) = 10$ (circa 9.20€) a pip
-        # 1 pip = 0.0001 (per la maggior parte delle coppie)
+    # Calcolo Lotti basato sulle tue specifiche
+    if "Indici" in asset:
+        # 0.01 lotti = 0.10€/punto -> 1 lotto = 10€/punto
+        lotti = risk_euro / (distanza_sl * 10)
+    elif "Forex" in asset:
+        # 1 lotto = 10€ a pip (approssimativo)
         pips = distanza_sl * 10000
-        # Assumendo valore pip standard di circa 10€ per 1 lotto intero
-        lotti = risk_euros / (pips * 10)
-        
-    else:  # Crypto
-        # Nelle Crypto (es. BTC) 1 lotto = 1 intero asset. 
-        # Il rischio è semplicemente la differenza di prezzo.
-        lotti = risk_euros / distanza_sl
+        lotti = risk_euro / (pips * 10)
+    else: # Crypto
+        lotti = risk_euro / distanza_sl
 
-    # Arrotondamento per il broker (solitamente 2 decimali)
-    lotti_finali = round(lotti, 2)
-    if lotti_finali < 0.01: lotti_finali = 0.01
+    lotti = round(lotti, 2)
+    if lotti < 0.01: lotti = 0.01
+    
+    rr = distanza_tp / distanza_sl
+    target_euro = (distanza_tp / distanza_sl) * risk_euro
 
-    # Calcolo Risultati monetari
-    profitto_tp = (distanza_tp / distanza_sl) * risk_euros if distanza_sl > 0 else 0
-    rr = distanza_tp / distanza_sl if distanza_sl > 0 else 0
-
-    # --- OUTPUT VISIVO ---
-    st.markdown("---")
-    st.success(f"## TAGLIA CONSIGLIATA: **{lotti_finali} Lotti**")
-
-    res1, res2, res3 = st.columns(3)
-    res1.metric("Rischio (€)", f"-{risk_euros:.2f} €")
-    res2.metric("Target (€)", f"+{profitto_tp:.2f} €")
+    # --- VISUALIZZAZIONE RISULTATI ---
+    st.success(f"### TAGLIA POSIZIONE: **{lotti} Lotti**")
+    
+    res1, res2, res3, res4 = st.columns(4)
+    res1.metric("Rischio €", f"-{risk_euro:.2f}€")
+    res2.metric("Profitto €", f"+{target_euro:.2f}€")
     res3.metric("Rapporto R/R", f"1:{rr:.2f}")
+    
+    # Cos'altro puoi aggiungere? -> Calcolo del CONTROVALORE e LEVA
+    notional = 0
+    if "Indici" in asset: notional = lotti * entry * 1 # Esempio moltiplicatore 1
+    elif "Forex" in asset: notional = lotti * 100000
+    else: notional = lotti * entry
+    
+    res4.metric("Controvalore", f"{notional:,.0f}€")
 
-    # Tabella di riepilogo tecnica
-    st.table({
-        "Asset": [asset_class],
-        "Distanza SL": [f"{distanza_sl:.5f}"],
-        "Valore punto/pip stimato": ["Standard Broker"]
-    })
+    # Messaggio di Alert se la leva è troppo alta
+    leva_effettiva = notional / balance
+    if leva_effettiva > 10:
+        st.warning(f"⚠️ Attenzione: Stai usando una leva effettiva di {leva_effettiva:.1f}x")
+    else:
+        st.info(f"Leva effettiva: {leva_effettiva:.1f}x")
 
 else:
-    st.error("Lo Stop Loss non può essere uguale all'entrata.")
+    st.error("Distanza Stop Loss non valida.")
 
 st.markdown("---")
-st.caption("© By Cerberus R&D - Proprietary Trading Tools")
+st.caption("by Cerberus R&D - Risk Management Suite v2.0")
