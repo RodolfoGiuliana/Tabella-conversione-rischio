@@ -104,4 +104,12 @@ if dist_sl > 0:
 else:
     st.error("Inserisci valori di prezzo validi per calcolare i lotti.")
 
+
+st.markdown("---")
+st.subheader("⚡ Scalping Mode (Solo Punti)")
+punti_sl_rapido = st.number_input("Distanza Stop Loss (Punti)", value=20)
+lotti_scalp = risk_euro / (punti_sl_rapido * 10)
+st.info(f"Per uno stop di {punti_sl_rapido} punti, usa **{lotti_scalp:.2f}** lotti.")
+
+
 st.caption("by Cerberus R&D - Risk Tool v2.1")
