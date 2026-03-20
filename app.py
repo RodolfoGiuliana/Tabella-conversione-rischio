@@ -4,7 +4,6 @@ import streamlit as st
 st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide")
 
 # --- 1. INIZIALIZZAZIONE STATO ---
-# Creiamo le variabili di stato se non esistono
 if 'entry' not in st.session_state:
     st.session_state.entry = 22800.0
     st.session_state.sl = 22700.0
@@ -43,7 +42,7 @@ st.selectbox(
 st.markdown("---")
 
 # --- 5. INPUT DINAMICI ---
-# Usiamo i valori dello state. Se l'utente scrive, lo state si aggiorna.
+# valori dello state. Se l'utente scrive, lo state si aggiorna.
 col1, col2, col3 = st.columns(3)
 with col1:
     entry = st.number_input("Entrata", value=st.session_state.entry, format="%.5f")
@@ -86,7 +85,7 @@ if dist_sl > 0:
     st.markdown("---")
 
     # --- 7. TABELLA MONEY MANAGEMENT DINAMICA ---
-    st.subheader("📈 Piano di Crescita Mensile (Target 3%)")
+    st.subheader(" Piano di Crescita Mensile (Target 3%)")
     st.write(f"Con un rischio dello **{risk_perc}%**, ecco come gestire il tuo capitale di **{balance:.2f}€**:")
 
     # Calcoli per la tabella basati sul rischio selezionato
