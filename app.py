@@ -1,28 +1,43 @@
 import streamlit as st
 import requests
 import pandas as pd
+from datetime import datetime
 
 # Configurazione Pagina
 st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide")
 
-# --- 0. CONFIGURAZIONE API NEWS ---
-# Ti consiglio di mettere la tua API Key nei "Secrets" di Railway/Github per sicurezza
-API_KEY = "LA_TUA_API_KEY_QUI" 
-NEWS_URL = "https://www.jblanked.com/news/api/list/"
+# --- 0. CONFIGURAZIONE API NEWS (FINNHUB) ---
+# Registrati su finnhub.io per avere la tua chiave gratuita (ci metti 30 secondi)
+FINNHUB_API_KEY = "IL_TUO_TOKEN_FINNHUB_QUI" 
 
-def get_economic_news():
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Api-Key {API_KEY}",
-    }
+def get_finnhub_news():
+    url = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_API_KEY}"
     try:
-        response = requests.get(NEWS_URL, headers=headers)
+        response = requests.get(url)
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            events = data.get('economicCalendar', [])
+            if not events:
+                return None
+            # Trasformiamo in DataFrame e puliamo i dati
+            df = pd.DataFrame(events)
+            # Selezioniamo e rinominiamo le colonne per chiarezza
+            cols_to_show = {
+                'time': 'Orario (UTC)',
+                'event': 'Evento',
+                'country': 'Paese',
+                'impact': 'Impatto',
+                'actual': 'Attuale',
+                'prev': 'Precedente'
+            }
+            df = df[list(cols_to_show.keys())].rename(columns=cols_to_show)
+            # Mappa l'impatto numerico in icone per colpo d'occhio
+            impact_map = {1: "🟢 Low", 2: "🟡 Medium", 3: "🔴 High"}
+            df['Impatto'] = df['Impatto'].map(impact_map)
+            return df
         else:
             return None
-    except Exception as e:
-        st.error(f"Errore nel recupero news: {e}")
+    except Exception:
         return None
 
 # --- 1. INIZIALIZZAZIONE STATO ---
@@ -62,18 +77,15 @@ st.selectbox(
 
 st.markdown("---")
 
-# --- 5. NEWS ECONOMICHE (Nuova Sezione) ---
-with st.expander("📅 Calendario Economico & News del Giorno", expanded=False):
-    news_data = get_economic_news()
-    if news_data:
-        # Convertiamo in DataFrame per una visualizzazione migliore
-        df_news = pd.DataFrame(news_data)
-        
-        # Selezioniamo solo le colonne interessanti se esistono (es: Time, Name, Impact, Currency)
-        # Nota: i nomi delle colonne dipendono dall'esatta risposta dell'API JBlanked
-        st.dataframe(df_news, use_container_width=True)
+# --- 5. NEWS ECONOMICHE ---
+with st.expander("📅 Calendario Economico (Oggi)", expanded=False):
+    st.write("Dati in tempo reale da Finnhub.io")
+    df_news = get_finnhub_news()
+    if df_news is not None:
+        # Mostra la tabella ordinata per orario
+        st.dataframe(df_news.sort_values(by='Orario (UTC)'), use_container_width=True, hide_index=True)
     else:
-        st.warning("Impossibile caricare le news. Controlla la tua API Key o il limite di richieste.")
+        st.info("Nessun evento macro rilevante per oggi o API Key mancante.")
 
 # --- 6. INPUT DINAMICI ---
 col1, col2, col3 = st.columns(3)
@@ -105,6 +117,7 @@ if dist_sl > 0:
     rr = dist_tp / dist_sl
     potenziale_profit = rr * risk_euro
 
+    # --- OUTPUT RISULTATI ---
     st.success(f"### TAGLIA POSIZIONE: **{lotti_finali} Lotti**")
     
     res1, res2, res3 = st.columns(3)
@@ -137,4 +150,4 @@ punti_sl_rapido = st.number_input("Distanza Stop Loss (Punti)", value=20)
 lotti_scalp = risk_euro / (punti_sl_rapido * 10)
 st.info(f"Per uno stop di {punti_sl_rapido} punti, usa **{lotti_scalp:.2f}** lotti.")
 
-st.caption("by Cerberus R&D - Risk Tool v2.1")
+st.caption("by Cerberus R&D - Risk Tool v2.2")
