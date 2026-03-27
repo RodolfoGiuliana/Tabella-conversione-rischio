@@ -7,20 +7,25 @@ from datetime import datetime
 st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide")
 
 # --- 0. CONFIGURAZIONE API NEWS (FINNHUB) ---
-# Registrati su finnhub.io per avere la tua chiave gratuita (ci metti 30 secondi)
 FINNHUB_API_KEY = "d7354tpr01qn7f07l6l0d7354tpr01qn7f07l6lg" 
 
 def get_finnhub_news():
-    url = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_API_KEY}"
+    # Otteniamo la data di oggi nel formato richiesto da Finnhub (YYYY-MM-DD)
+    today = datetime.now().strftime('%Y-%m-%d')
+    url = f"https://finnhub.io/api/v1/calendar/economic?from={today}&to={today}&token={FINNHUB_API_KEY}"
+    
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
             events = data.get('economicCalendar', [])
+            
             if not events:
                 return None
-            # Trasformiamo in DataFrame e puliamo i dati
+            
+            # Trasformiamo in DataFrame
             df = pd.DataFrame(events)
+            
             # Selezioniamo e rinominiamo le colonne per chiarezza
             cols_to_show = {
                 'time': 'Orario (UTC)',
@@ -30,10 +35,14 @@ def get_finnhub_news():
                 'actual': 'Attuale',
                 'prev': 'Precedente'
             }
+            
+            # Filtriamo solo le colonne esistenti nella risposta
             df = df[list(cols_to_show.keys())].rename(columns=cols_to_show)
-            # Mappa l'impatto numerico in icone per colpo d'occhio
+            
+            # Mappa l'impatto numerico in icone (1=Low, 2=Med, 3=High)
             impact_map = {1: "🟢 Low", 2: "🟡 Medium", 3: "🔴 High"}
             df['Impatto'] = df['Impatto'].map(impact_map)
+            
             return df
         else:
             return None
@@ -78,14 +87,18 @@ st.selectbox(
 st.markdown("---")
 
 # --- 5. NEWS ECONOMICHE ---
-with st.expander("📅 Calendario Economico (Oggi)", expanded=False):
-    st.write("Dati in tempo reale da Finnhub.io")
+with st.expander("📅 Calendario Economico (Oggi)", expanded=True):
+    st.write(f"Dati aggiornati al: **{datetime.now().strftime('%d/%m/%Y')}**")
     df_news = get_finnhub_news()
     if df_news is not None:
         # Mostra la tabella ordinata per orario
-        st.dataframe(df_news.sort_values(by='Orario (UTC)'), use_container_width=True, hide_index=True)
+        st.dataframe(
+            df_news.sort_values(by='Orario (UTC)'), 
+            use_container_width=True, 
+            hide_index=True
+        )
     else:
-        st.info("Nessun evento macro rilevante per oggi o API Key mancante.")
+        st.info("Nessun evento macro rilevante trovato per oggi. Se è weekend, è normale.")
 
 # --- 6. INPUT DINAMICI ---
 col1, col2, col3 = st.columns(3)
