@@ -3,8 +3,7 @@ import streamlit.components.v1 as components
 import pandas as pd
 
 # Configurazione Pagina
-st.set_title = "Cerberus R&D - Professional Suite"
-st.set_page_config(page_title="Cerberus R&D", layout="wide")
+st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide")
 
 # --- 1. INIZIALIZZAZIONE STATO ---
 if 'entry' not in st.session_state:
@@ -43,9 +42,9 @@ st.selectbox(
 
 st.markdown("---")
 
-# --- 5. CALENDARIO ECONOMICO (TRADINGVIEW WIDGET) ---
-st.subheader("📅 Calendario Economico Live")
-# Questo componente carica il widget ufficiale di TradingView
+# --- 5. CALENDARIO ECONOMICO (SOLO ALTO IMPATTO) ---
+st.subheader("⚠️ Calendario Market Mover (Alto Impatto)")
+# importanceFilter: "1" mostra solo High Importance
 tradingview_html = """
 <div class="tradingview-widget-container">
   <div class="tradingview-widget-container__widget"></div>
@@ -56,7 +55,7 @@ tradingview_html = """
   "width": "100%",
   "height": "400",
   "locale": "it",
-  "importanceFilter": "-1,0,1",
+  "importanceFilter": "1",
   "currencyFilter": "USD,EUR,GBP,JPY,AUD,CAD"
 }
   </script>
@@ -96,6 +95,7 @@ if dist_sl > 0:
     rr = dist_tp / dist_sl
     potenziale_profit = rr * risk_euro
 
+    # --- OUTPUT RISULTATI ---
     st.success(f"### TAGLIA POSIZIONE: **{lotti_finali} Lotti**")
     
     res1, res2, res3 = st.columns(3)
@@ -128,4 +128,4 @@ punti_sl_rapido = st.number_input("Distanza Stop Loss (Punti)", value=20)
 lotti_scalp = risk_euro / (punti_sl_rapido * 10)
 st.info(f"Per uno stop di {punti_sl_rapido} punti, usa **{lotti_scalp:.2f}** lotti.")
 
-st.caption("by Cerberus R&D - Risk Tool v3.0")
+st.caption("by Cerberus R&D - Risk Tool v3.1")
