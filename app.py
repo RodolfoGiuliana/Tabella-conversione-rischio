@@ -8,7 +8,7 @@ st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide"
 
 # --- 0. CONFIGURAZIONE API NEWS (FINNHUB) ---
 # Registrati su finnhub.io per avere la tua chiave gratuita (ci metti 30 secondi)
-FINNHUB_API_KEY = "IL_TUO_TOKEN_FINNHUB_QUI" 
+FINNHUB_API_KEY = "d7354tpr01qn7f07l6l0d7354tpr01qn7f07l6lg" 
 
 def get_finnhub_news():
     url = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_API_KEY}"
