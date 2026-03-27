@@ -1,131 +1,135 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import numpy as np
 
-# Configurazione Pagina
-st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide")
+# --- CONFIGURAZIONE PAGINA ---
+st.set_page_config(page_title="Cerberus R&D - Asset Management Suite", layout="wide", initial_sidebar_state="expanded")
 
-# --- 1. INIZIALIZZAZIONE STATO ---
-if 'entry' not in st.session_state:
-    st.session_state.entry = 22800.0
-    st.session_state.sl = 22700.0
-    st.session_state.tp = 23000.0
+# --- STILE CSS PERSONALIZZATO ---
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    .stMetric { background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- 2. FUNZIONE DI RESET ---
-def reset_inputs():
-    asset = st.session_state.asset_selection
-    if asset == "Indici (DAX)":
-        st.session_state.entry = 22800.0
-        st.session_state.sl = 22700.0
-        st.session_state.tp = 23000.0
-    elif asset == "Forex (EUR/USD)":
-        st.session_state.entry = 1.08500
-        st.session_state.sl = 1.08000
-        st.session_state.tp = 1.09500
-    elif asset == "Crypto (BTC)":
-        st.session_state.entry = 65000.0
-        st.session_state.sl = 64000.0
-        st.session_state.tp = 67000.0
+# --- 1. SIDEBAR (Parametri Globali) ---
+st.sidebar.title("🛡️ Cerberus Management")
+balance = st.sidebar.number_input("Capitale in Gestione (€)", value=10000.0, step=1000.0)
+max_daily_loss = st.sidebar.slider("Max Daily Drawdown (%)", 1.0, 5.0, 2.0)
+st.sidebar.markdown("---")
+st.sidebar.caption("Institutional Risk Control v4.0")
 
-# --- 3. SIDEBAR ---
-st.sidebar.title("🛡️ Cerberus R&D")
-balance = st.sidebar.number_input("Capitale Conto (€)", value=10000.0, step=500.0)
-risk_perc = st.sidebar.slider("Rischio per Operazione (%)", 0.10, 2.0, 0.25, 0.05)
+# --- 2. NAVIGAZIONE (BOTTONI / TABS) ---
+tabs = st.tabs(["🧮 Risk Calculator", "📅 Macro Analysis", "📊 Quantitative Stats", "📝 Trading Journal"])
 
-# --- 4. SELEZIONE ASSET ---
-st.selectbox(
-    "Seleziona lo strumento:",
-    ["Indici (DAX)", "Forex (EUR/USD)", "Crypto (BTC)"],
-    key="asset_selection",
-    on_change=reset_inputs
-)
-
-st.markdown("---")
-
-# --- 5. CALENDARIO ECONOMICO (SOLO ALTO IMPATTO) ---
-st.subheader("⚠️ Calendario Market Mover (Alto Impatto)")
-# importanceFilter: "1" mostra solo High Importance
-tradingview_html = """
-<div class="tradingview-widget-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-  {
-  "colorTheme": "dark",
-  "isMaximized": true,
-  "width": "100%",
-  "height": "400",
-  "locale": "it",
-  "importanceFilter": "1",
-  "currencyFilter": "USD,EUR,GBP,JPY,AUD,CAD"
-}
-  </script>
-</div>
-"""
-components.html(tradingview_html, height=420)
-
-st.markdown("---")
-
-# --- 6. INPUT DINAMICI ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    entry = st.number_input("Entrata", value=st.session_state.entry, format="%.5f")
-    st.session_state.entry = entry
-with col2:
-    sl = st.number_input("Stop Loss", value=st.session_state.sl, format="%.5f")
-    st.session_state.sl = sl
-with col3:
-    tp = st.number_input("Take Profit", value=st.session_state.tp, format="%.5f")
-    st.session_state.tp = tp
-
-# --- 7. CALCOLI ---
-risk_euro = balance * (risk_perc / 100)
-dist_sl = abs(entry - sl)
-dist_tp = abs(tp - entry)
-
-if dist_sl > 0:
-    if "Indici" in st.session_state.asset_selection:
-        lotti = risk_euro / (dist_sl * 10)
-    elif "Forex" in st.session_state.asset_selection:
-        pips = dist_sl * 10000
-        lotti = risk_euro / (pips * 10)
-    else: # Crypto
-        lotti = risk_euro / dist_sl
-
-    lotti_finali = max(round(lotti, 2), 0.01)
-    rr = dist_tp / dist_sl
-    potenziale_profit = rr * risk_euro
-
-    # --- OUTPUT RISULTATI ---
-    st.success(f"### TAGLIA POSIZIONE: **{lotti_finali} Lotti**")
+# --- TAB 1: RISK CALCULATOR ---
+with tabs[0]:
+    st.header("Position Sizing & Risk Management")
     
-    res1, res2, res3 = st.columns(3)
-    res1.metric("Rischio (€)", f"-{risk_euro:.2f} €")
-    res2.metric("Target (€)", f"+{potenziale_profit:.2f} €")
-    res3.metric("Rapporto R/R", f"1:{rr:.2f}")
+    # Selezione Asset
+    asset_type = st.selectbox(
+        "Strumento Finanziario:",
+        ["Indici (DAX/NAS)", "Forex (EUR/USD/GBP)", "Crypto (BTC/ETH)"],
+        key="asset_sel"
+    )
 
-    st.markdown("---")
+    col_inp1, col_inp2, col_inp3 = st.columns(3)
+    with col_inp1:
+        entry = st.number_input("Prezzo Entrata", value=15000.0, format="%.5f")
+    with col_inp2:
+        sl = st.number_input("Stop Loss", value=14950.0, format="%.5f")
+    with col_inp3:
+        tp = st.number_input("Take Profit", value=15100.0, format="%.5f")
 
-    # --- 8. TABELLA MONEY MANAGEMENT ---
-    st.subheader("📈 Piano di Crescita Mensile (Target 3%)")
-    win_RR2 = risk_euro * 2
-    target_3_percent = balance * 0.03
-    op_necessarie = round(target_3_percent / win_RR2, 1) if win_RR2 > 0 else 0
+    risk_perc = st.slider("Rischio Operativo (%)", 0.1, 2.0, 0.5, 0.1)
+    
+    # Calcoli Tecnici
+    risk_euro = balance * (risk_perc / 100)
+    dist_sl = abs(entry - sl)
+    dist_tp = abs(tp - entry)
 
-    mm_data = [
-        {"Parametro": "Rischio per Trade (€)", "Valore": f"{risk_euro:.2f} €"},
-        {"Parametro": "Profitto Target (3% Mese)", "Valore": f"{target_3_percent:.2f} €"},
-        {"Parametro": "Trade vinti necessari (RR 1:2)", "Valore": f"{op_necessarie}"},
-        {"Parametro": "Perdita Massima Giornaliera (4 trade)", "Valore": f"{(risk_euro * 4):.2f} €"}
-    ]
-    st.table(mm_data)
+    if dist_sl > 0:
+        # Logica Lotti
+        if "Indici" in asset_type: lotti = risk_euro / (dist_sl * 10)
+        elif "Forex" in asset_type: lotti = risk_euro / (dist_sl * 10000 * 10)
+        else: lotti = risk_euro / dist_sl
+        
+        lotti_finali = max(round(lotti, 2), 0.01)
+        rr = dist_tp / dist_sl
+        
+        # Dashboard Risultati
+        res_col1, res_col2, res_col3, res_col4 = st.columns(4)
+        res_col1.metric("SIZE (LOTTI)", f"{lotti_finali}")
+        res_col2.metric("RISCHIO (€)", f"-{risk_euro:.2f} €")
+        res_col3.metric("PROFITTO (€)", f"+{rr*risk_euro:.2f} €")
+        res_col4.metric("RATIO R/R", f"1:{rr:.2f}")
 
-else:
-    st.error("Inserisci valori di prezzo validi per calcolare i lotti.")
+        if rr < 1.5:
+            st.warning("⚠️ Rapporto Rischio/Rendimento sub-ottimale (< 1:1.5). Valutare l'operazione.")
+        else:
+            st.success("✅ Parametri di rischio validati per l'esecuzione.")
+
+# --- TAB 2: MACRO ANALYSIS ---
+with tabs[1]:
+    st.header("High Impact Economic Calendar")
+    st.info("Filtro attivo: Solo news ad alto impatto (Market Movers)")
+    
+    tradingview_macro = """
+    <div class="tradingview-widget-container">
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+      {
+      "colorTheme": "dark", "width": "100%", "height": "500", "locale": "it",
+      "importanceFilter": "1", "currencyFilter": "USD,EUR,GBP,JPY"
+      }
+      </script>
+    </div>
+    """
+    components.html(tradingview_macro, height=520)
+
+# --- TAB 3: QUANTITATIVE STATS ---
+with tabs[2]:
+    st.header("Quantitative Risk Analysis")
+    
+    q_col1, q_col2 = st.columns(2)
+    
+    with q_col1:
+        st.subheader("Simulazione Drawdown Progressivo")
+        # Tabella stress test
+        losses = []
+        temp_balance = balance
+        for i in range(1, 6):
+            temp_balance -= risk_euro
+            losses.append({"Trade Persi": i, "Capitale Rimanente": f"{temp_balance:.2f} €", "Drawdown Totale": f"-{(1 - temp_balance/balance)*100:.2f}%"})
+        st.table(pd.DataFrame(losses))
+
+    with q_col2:
+        st.subheader("Kelly Criterion (Optimized Size)")
+        win_rate = st.number_input("Tua Win Rate storica (%)", 10, 90, 50) / 100
+        # Formula Kelly: K% = W - [(1-W)/R]
+        kelly = win_rate - ((1 - win_rate) / rr) if rr > 0 else 0
+        st.metric("Kelly Suggestion", f"{max(0, kelly*100):.2f}%")
+        st.caption("La \% del capitale suggerita matematicamente per questo trade in base alla tua statistica.")
+
+# --- TAB 4: TRADING JOURNAL ---
+with tabs[3]:
+    st.header("Professional Trading Log")
+    log_col1, log_col2 = st.columns([1, 2])
+    with log_col1:
+        st.text_input("Asset")
+        st.selectbox("Direzione", ["LONG", "SHORT"])
+        st.text_area("Perchè stai entrando? (Confluenze)")
+        if st.button("Salva Setup"):
+            st.toast("Setup salvato localmente")
+    with log_col2:
+        st.markdown("""
+        **Checklist pre-trade per Gestori:**
+        - [ ] News Alto Impatto controllate?
+        - [ ] Correlazioni inverse verificate? (es. DXY vs EURUSD)
+        - [ ] Esposizione massima giornaliera non superata?
+        - [ ] Mindset stabile (No Revenge Trading)?
+        """)
 
 st.markdown("---")
-st.subheader("⚡ Scalping Mode (Solo Punti)")
-punti_sl_rapido = st.number_input("Distanza Stop Loss (Punti)", value=20)
-lotti_scalp = risk_euro / (punti_sl_rapido * 10)
-st.info(f"Per uno stop di {punti_sl_rapido} punti, usa **{lotti_scalp:.2f}** lotti.")
-
-st.caption("by Cerberus R&D - Risk Tool v3.1")
+st.caption("© 2026 Cerberus R&D - Professional Asset Management Tool")
