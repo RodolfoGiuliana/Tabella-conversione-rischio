@@ -22,7 +22,7 @@ st.sidebar.markdown("---")
 st.sidebar.caption("Institutional Risk Control v4.0")
 
 # --- 2. NAVIGAZIONE (BOTTONI / TABS) ---
-tabs = st.tabs(["🧮 Risk Calculator", "📅 Macro Analysis", "📊 Quantitative Stats", "📝 Trading Journal"])
+tabs = st.tabs(["🧮 Risk Calculator", "📅 Market News ", "📊 Quantitative Stats", "📝 Trading Journal"])
 
 # --- TAB 1: RISK CALCULATOR ---
 with tabs[0]:
