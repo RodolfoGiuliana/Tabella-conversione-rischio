@@ -1,53 +1,10 @@
 import streamlit as st
-import requests
+import streamlit.components.v1 as components
 import pandas as pd
-from datetime import datetime
 
 # Configurazione Pagina
-st.set_page_config(page_title="Cerberus R&D - Professional Suite", layout="wide")
-
-# --- 0. CONFIGURAZIONE API NEWS (FINNHUB) ---
-FINNHUB_API_KEY = "d7354tpr01qn7f07l6l0d7354tpr01qn7f07l6lg" 
-
-def get_finnhub_news():
-    # Otteniamo la data di oggi nel formato richiesto da Finnhub (YYYY-MM-DD)
-    today = datetime.now().strftime('%Y-%m-%d')
-    url = f"https://finnhub.io/api/v1/calendar/economic?from={today}&to={today}&token={FINNHUB_API_KEY}"
-    
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            events = data.get('economicCalendar', [])
-            
-            if not events:
-                return None
-            
-            # Trasformiamo in DataFrame
-            df = pd.DataFrame(events)
-            
-            # Selezioniamo e rinominiamo le colonne per chiarezza
-            cols_to_show = {
-                'time': 'Orario (UTC)',
-                'event': 'Evento',
-                'country': 'Paese',
-                'impact': 'Impatto',
-                'actual': 'Attuale',
-                'prev': 'Precedente'
-            }
-            
-            # Filtriamo solo le colonne esistenti nella risposta
-            df = df[list(cols_to_show.keys())].rename(columns=cols_to_show)
-            
-            # Mappa l'impatto numerico in icone (1=Low, 2=Med, 3=High)
-            impact_map = {1: "🟢 Low", 2: "🟡 Medium", 3: "🔴 High"}
-            df['Impatto'] = df['Impatto'].map(impact_map)
-            
-            return df
-        else:
-            return None
-    except Exception:
-        return None
+st.set_title = "Cerberus R&D - Professional Suite"
+st.set_page_config(page_title="Cerberus R&D", layout="wide")
 
 # --- 1. INIZIALIZZAZIONE STATO ---
 if 'entry' not in st.session_state:
@@ -86,19 +43,28 @@ st.selectbox(
 
 st.markdown("---")
 
-# --- 5. NEWS ECONOMICHE ---
-with st.expander("📅 Calendario Economico (Oggi)", expanded=True):
-    st.write(f"Dati aggiornati al: **{datetime.now().strftime('%d/%m/%Y')}**")
-    df_news = get_finnhub_news()
-    if df_news is not None:
-        # Mostra la tabella ordinata per orario
-        st.dataframe(
-            df_news.sort_values(by='Orario (UTC)'), 
-            use_container_width=True, 
-            hide_index=True
-        )
-    else:
-        st.info("Nessun evento macro rilevante trovato per oggi. Se è weekend, è normale.")
+# --- 5. CALENDARIO ECONOMICO (TRADINGVIEW WIDGET) ---
+st.subheader("📅 Calendario Economico Live")
+# Questo componente carica il widget ufficiale di TradingView
+tradingview_html = """
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+  {
+  "colorTheme": "dark",
+  "isMaximized": true,
+  "width": "100%",
+  "height": "400",
+  "locale": "it",
+  "importanceFilter": "-1,0,1",
+  "currencyFilter": "USD,EUR,GBP,JPY,AUD,CAD"
+}
+  </script>
+</div>
+"""
+components.html(tradingview_html, height=420)
+
+st.markdown("---")
 
 # --- 6. INPUT DINAMICI ---
 col1, col2, col3 = st.columns(3)
@@ -130,7 +96,6 @@ if dist_sl > 0:
     rr = dist_tp / dist_sl
     potenziale_profit = rr * risk_euro
 
-    # --- OUTPUT RISULTATI ---
     st.success(f"### TAGLIA POSIZIONE: **{lotti_finali} Lotti**")
     
     res1, res2, res3 = st.columns(3)
@@ -163,4 +128,4 @@ punti_sl_rapido = st.number_input("Distanza Stop Loss (Punti)", value=20)
 lotti_scalp = risk_euro / (punti_sl_rapido * 10)
 st.info(f"Per uno stop di {punti_sl_rapido} punti, usa **{lotti_scalp:.2f}** lotti.")
 
-st.caption("by Cerberus R&D - Risk Tool v2.2")
+st.caption("by Cerberus R&D - Risk Tool v3.0")
